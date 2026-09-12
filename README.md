@@ -1,37 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ระบบเอกสาร — ร้านนักเรียนไอที
 
-## Getting Started
+ระบบออก **ใบเสนอราคา** และ **ใบเสร็จรับเงิน** พร้อมทะเบียนลูกค้าและสินค้า
+เก็บข้อมูลบน Supabase · Next.js 15 + React 19 + Tailwind CSS v4
 
-First, run the development server:
+---
+
+## ตั้งค่าครั้งแรก
+
+### 1. ใส่ connection string
+
+คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ค่าจริงจาก
+Supabase Dashboard → **Project Settings → Database → Connection string**
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| ตัวแปร | ใช้ทำอะไร | พอร์ต |
+|---|---|---|
+| `DATABASE_URL` | เว็บใช้ตอนทำงานปกติ (Transaction pooler) | 6543 |
+| `DIRECT_URL` | ใช้ตอนรันไฟล์ SQL เท่านั้น (Session pooler) | 5432 |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. สร้างตารางในฐานข้อมูล
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+เปิด Supabase → **SQL Editor** แล้วรัน 2 ไฟล์นี้ **ตามลำดับ**
 
-## Learn More
+| ลำดับ | ไฟล์ | ทำอะไร |
+|---|---|---|
+| 1 | `supabase/schema.sql` | สร้างตาราง, ฟังก์ชันออกเลขที่เอกสาร, trigger |
+| 2 | `supabase/lockdown.sql` | **ปิดไม่ให้ REST API สาธารณะแตะข้อมูล** (ดูหัวข้อถัดไป) |
 
-To learn more about Next.js, take a look at the following resources:
+### 3. รัน
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm install
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+เปิด http://localhost:3000 แล้วไปที่ **ตั้งค่าร้าน** เพื่อใส่ข้อมูลร้าน เบอร์โทร เลขบัญชี และเลือกสีเอกสาร
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔒 เรื่องความปลอดภัย
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# pricepaper
+เว็บนี้ต่อฐานข้อมูล **จากฝั่ง server เท่านั้น** ทุก query วิ่งผ่าน Server Component
+และ Server Action — ไม่มีรหัสหรือคีย์อะไรหลุดไปกับ JavaScript ที่ส่งให้เบราว์เซอร์
+จึงใช้งานได้โดยไม่ต้องมีระบบล็อกอิน ตามที่ต้องการ
+
+**แต่ต้องรัน `supabase/lockdown.sql`** เพราะ Supabase ให้สิทธิ์ role `anon`
+แบบเต็ม (SELECT/INSERT/UPDATE/DELETE) กับทุกตารางโดยอัตโนมัติ และ `anon key`
+เป็นค่าสาธารณะที่ใครก็อ่านได้ ถ้าไม่ปิด = ใครก็ลบข้อมูลทั้งร้านได้ผ่าน REST API
+ไฟล์นี้จะยึดสิทธิ์คืนและเปิด RLS แบบไม่มี policy ให้เรียบร้อย
+
+ตรวจว่าปิดสำเร็จได้ด้วย:
+
+```sql
+select count(*) from information_schema.role_table_grants
+where table_schema = 'public' and grantee in ('anon', 'authenticated');
+-- ต้องได้ 0
+```
+
+> ถ้าจะ deploy ขึ้นเน็ตจริง ควรใส่ระบบล็อกอินเพิ่ม เพราะตอนนี้ใครที่เข้าถึง
+> URL ของเว็บได้ ก็ออกและลบเอกสารได้
+
+---
+
+## การใช้งาน
+
+| หน้า | ใช้ทำอะไร |
+|---|---|
+| **ภาพรวม** | ยอดรับเงินเดือนนี้ ใบเสนอราคาที่ยังรอตอบรับ และเอกสารล่าสุด |
+| **ใบเสนอราคา / ใบเสร็จรับเงิน** | รายการเอกสารทั้งหมด กรองตามสถานะ ค้นหาด้วยเลขที่หรือชื่อลูกค้า |
+| **ลูกค้า** | ทะเบียนลูกค้าประจำ แสดงเป็นตารางแบ่งหน้า — ออกเอกสารครั้งหน้าเลือกได้เลย |
+| **สินค้า/บริการ** | รายการที่ขายบ่อย พิมพ์ชื่อในเอกสารแล้วราคากับหน่วยจะเด้งมาเอง |
+| **ตั้งค่าร้าน** | ชื่อร้าน โลโก้ เลขบัญชี สีเอกสาร และข้อความตั้งต้น |
+
+### จุดที่ช่วยประหยัดเวลา
+
+- **ใบเสนอราคา → ใบเสร็จ ในคลิกเดียว** — เปิดใบเสนอราคาแล้วกด "สร้างใบเสร็จจากใบนี้"
+  ระบบจะคัดลอกลูกค้าและรายการทั้งหมดมาให้ พร้อมผูกเอกสารสองใบเข้าด้วยกัน
+- **เลขที่เอกสาร** กรอกเองก็ได้ (เช่น `IT-68/001`) เว้นว่างไว้ระบบจะออกให้เป็น
+  `QT-2026-0001` / `RC-2026-0001` เรียงต่อกันรายปี ออกจากฝั่งฐานข้อมูล
+  จึงไม่ชนกันแม้เปิดหลายแท็บพร้อมกัน และการกรอกเองไม่กินเลขของลำดับอัตโนมัติ
+- **ตัวอย่างเอกสารสด** ข้าง ๆ ฟอร์ม — เห็นหน้าตาที่จะพิมพ์ออกมาทันทีระหว่างพิมพ์
+- **บันทึกเป็น PDF** กดปุ่ม "พิมพ์ / บันทึก PDF" แล้วเลือกปลายทางเป็น
+  *Save as PDF* ในหน้าต่างพิมพ์ของเบราว์เซอร์ (ตั้งขนาด A4 ไว้ให้แล้ว)
+
+### สีเอกสาร
+
+เลือกได้ในหน้าตั้งค่า ค่าเริ่มต้นคือเหลืองทอง `#f6c145` ตามโลโก้ร้าน
+
+ระบบคำนวณคู่สีให้อัตโนมัติ สีอ่อนอย่างเหลืองจะได้ตัวหนังสือสีเข้มบนแถบ
+และเวลาใช้สีนั้นเป็นตัวหนังสือบนกระดาษขาว จะถูกหรี่ลงจนคอนทราสต์ผ่าน
+เกณฑ์ WCAG 4.5:1 เอง — เลือกสีไหนก็อ่านออกทั้งบนจอและตอนพิมพ์
+
+---
+
+## หมายเหตุเรื่องข้อมูล
+
+- **เอกสารเก็บ snapshot ของลูกค้าและรายการไว้ในตัวเอง** แก้ราคาสินค้าในทะเบียน
+  หรือลบลูกค้าออก เอกสารเก่าที่ออกไปแล้วจะไม่เปลี่ยนตาม (ซึ่งเป็นสิ่งที่ควรเป็น
+  สำหรับเอกสารการเงิน)
+- **ยอดเงินคำนวณใหม่ที่ฝั่ง server เสมอ** ไม่เชื่อตัวเลขที่ส่งมาจากเบราว์เซอร์
+  ตัวเลขในฐานข้อมูลจึงตรงกับรายการเสมอ
+- **หัวเอกสารกับรายการบันทึกในทรานแซกชันเดียว** ไม่มีทางได้เอกสารที่ไม่มีรายการ
+- ระบบตั้งไว้แบบ **ไม่มี VAT** — ยอดรวมคือยอดที่ลูกค้าจ่ายจริง
+  ถ้าวันหลังจดทะเบียน VAT ต้องเพิ่มคอลัมน์ `vat_rate` / `vat_amount` ในตาราง `documents`
+
+---
+
+## โครงสร้างโปรเจกต์
+
+```
+supabase/
+  schema.sql          ตาราง + ฟังก์ชันออกเลขที่เอกสาร (รันซ้ำได้)
+  lockdown.sql        ปิดสิทธิ์ anon ของ REST API (รันซ้ำได้)
+src/
+  app/
+    page.tsx              ภาพรวม
+    documents/            รายการ / สร้าง / ดู / แก้ไข เอกสาร
+    customers/            ทะเบียนลูกค้า
+    products/             ทะเบียนสินค้า
+    settings/             ตั้งค่าร้าน
+  components/
+    DocumentPaper.tsx     ตัวเอกสาร A4 ที่พิมพ์ออกมา
+    DocumentEditor.tsx    ฟอร์มออกเอกสาร + ตัวอย่างสด
+    PaperPreview.tsx      ย่อกระดาษ A4 ให้พอดีจอ
+    CustomerManager.tsx   ตารางลูกค้า + แบ่งหน้า
+  lib/
+    db.ts                 การเชื่อมต่อ Postgres (server เท่านั้น)
+    data.ts               query ทั้งหมดฝั่ง server
+    color.ts              คำนวณคู่สีให้อ่านออกเสมอ
+    format.ts             จัดรูปแบบเงิน วันที่ไทย และตัวอักษรบาท
+    types.ts              type ของตารางในฐานข้อมูล
+```

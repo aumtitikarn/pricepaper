@@ -9,12 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
-    "html2pdf.js": "^0.10.3",
-    "jspdf": "^3.0.1",
     "next": "15.4.4",
+    "postgres": "^3.4.9",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
+    "prisma": "^8.1.0-dev.6",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
