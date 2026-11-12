@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DocumentPaper, { type PaperDoc } from './DocumentPaper';
 import PaperPreview from './PaperPreview';
-import { saveDocument, type DocumentPayload } from '@/app/documents/actions';
+import { saveDocument, type DocumentPayload } from '@/app/(app)/documents/actions';
 import { addDaysISO, money, todayISO } from '@/lib/format';
 import { buttonClass, inputClass, labelClass } from './ui';
 import {

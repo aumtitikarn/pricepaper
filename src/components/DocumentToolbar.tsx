@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { convertToReceipt, deleteDocument, updateStatus } from '@/app/documents/actions';
+import { convertToReceipt, deleteDocument, updateStatus } from '@/app/(app)/documents/actions';
 import { buttonClass, inputClass } from './ui';
 import { DOC_STATUS_LABEL, STATUS_OPTIONS, type DocStatus, type DocType } from '@/lib/types';
 

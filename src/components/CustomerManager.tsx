@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { deleteCustomer, saveCustomer, type CustomerInput } from '@/app/customers/actions';
+import { deleteCustomer, saveCustomer, type CustomerInput } from '@/app/(app)/customers/actions';
 import { EmptyState, buttonClass, inputClass, labelClass } from './ui';
 import type { Customer } from '@/lib/types';
 

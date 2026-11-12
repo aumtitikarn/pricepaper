@@ -107,16 +107,15 @@ export function SetupNotice() {
         <h1 className="text-xl font-semibold text-ink-900">ยังไม่ได้เชื่อมต่อฐานข้อมูล</h1>
         <p className="mt-2 text-sm text-ink-600">
           สร้างไฟล์ <code className="rounded bg-ink-100 px-1.5 py-0.5 text-ink-800">.env.local</code>{' '}
-          ที่รากโปรเจกต์ แล้วใส่ connection string จาก Supabase &gt; Project Settings &gt;
-          Database &gt; Connection string &gt; Transaction pooler
+          ที่รากโปรเจกต์ แล้วใส่ connection string จาก Neon Console &gt; ปุ่ม Connect &gt;
+          Pooled connection
         </p>
         <pre className="mt-4 overflow-x-auto rounded-lg bg-ink-900 p-4 text-xs leading-relaxed text-ink-100">
-{`DATABASE_URL="postgresql://postgres.xxxx:PASSWORD@...pooler.supabase.com:6543/postgres?pgbouncer=true"`}
+{`DATABASE_URL="postgresql://USER:PASSWORD@ep-xxxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"`}
         </pre>
         <p className="mt-4 text-sm text-ink-600">
-          จากนั้นรัน <code className="rounded bg-ink-100 px-1.5 py-0.5 text-ink-800">supabase/schema.sql</code>{' '}
-          และ <code className="rounded bg-ink-100 px-1.5 py-0.5 text-ink-800">supabase/lockdown.sql</code>{' '}
-          ใน SQL Editor ของ Supabase แล้วรีสตาร์ต dev server
+          จากนั้นรัน <code className="rounded bg-ink-100 px-1.5 py-0.5 text-ink-800">db/schema.sql</code>{' '}
+          ใน SQL Editor ของ Neon แล้วรีสตาร์ต dev server
         </p>
       </div>
     </Container>
@@ -130,8 +129,8 @@ export function ErrorNotice({ message }: { message: string }) {
       <p className="font-medium text-rose-900">โหลดข้อมูลไม่สำเร็จ</p>
       <p className="mt-1 text-sm text-rose-700">{message}</p>
       <p className="mt-3 text-sm text-rose-700">
-        ถ้าเพิ่งตั้งค่าครั้งแรก ตรวจว่ารัน <code className="font-mono">supabase/schema.sql</code> และ{' '}
-        <code className="font-mono">supabase/lockdown.sql</code> ใน Supabase แล้ว
+        ถ้าเพิ่งตั้งค่าครั้งแรก ตรวจว่ารัน <code className="font-mono">db/schema.sql</code> ในฐานข้อมูลแล้ว
+        และ <code className="font-mono">DATABASE_URL</code> ใน <code className="font-mono">.env.local</code> ถูกต้อง
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 -- ============================================================
 --  ร้านนักเรียนไอที — ระบบเอกสาร (Quotation / Receipt)
---  Schema สำหรับ Supabase (PostgreSQL)
---  รันไฟล์นี้ใน Supabase Dashboard > SQL Editor
+--  Schema สำหรับ PostgreSQL (ใช้กับ Neon)
+--  รันไฟล์นี้ใน Neon Console > SQL Editor หรือ psql "$DATABASE_URL_UNPOOLED" -f db/schema.sql
 -- ============================================================
 
 -- ---------- 1. ตั้งค่าร้าน (มีแถวเดียว) ----------

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteProduct, saveProduct, type ProductInput } from '@/app/products/actions';
+import { deleteProduct, saveProduct, type ProductInput } from '@/app/(app)/products/actions';
 import { Modal } from './CustomerManager';
 import { EmptyState, buttonClass, inputClass, labelClass } from './ui';
 import { money } from '@/lib/format';

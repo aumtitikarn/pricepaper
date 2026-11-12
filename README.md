@@ -1,36 +1,64 @@
 # ระบบเอกสาร — ร้านนักเรียนไอที
 
 ระบบออก **ใบเสนอราคา** และ **ใบเสร็จรับเงิน** พร้อมทะเบียนลูกค้าและสินค้า
-เก็บข้อมูลบน Supabase · Next.js 15 + React 19 + Tailwind CSS v4
+เก็บข้อมูลบน PostgreSQL (Neon) · Next.js 15 + React 19 + Tailwind CSS v4
 
 ---
 
 ## ตั้งค่าครั้งแรก
 
-### 1. ใส่ connection string
+### 1. สร้างฐานข้อมูลบน Neon (ฟรี)
 
-คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ค่าจริงจาก
-Supabase Dashboard → **Project Settings → Database → Connection string**
+สมัครที่ [neon.tech](https://neon.tech) แล้วสร้างโปรเจกต์ใหม่ เลือก region
+**AWS Asia Pacific (Singapore)** เพื่อให้ใกล้ไทยที่สุด
+
+Neon แพ็กเกจฟรีจะพักฐานข้อมูลเมื่อไม่มีการใช้งาน แต่จะตื่นเองทันทีที่เว็บต่อเข้ามา
+ไม่ต้องเข้าไปกด restore เหมือน Supabase
+
+### 2. ใส่ connection string
+
+ใช้ Neon CLI ดึงค่าลง `.env` ให้อัตโนมัติ (แทน `<project-id>` / `<org-id>` ด้วยของโปรเจกต์คุณ):
 
 ```bash
-cp .env.example .env.local
+npm i -g neon@latest
+neon login
+neon init -y --agent claude-code --org-id <org-id> --project-id <project-id>
 ```
 
-| ตัวแปร | ใช้ทำอะไร | พอร์ต |
+หรือคัดลอก `.env.example` เป็น `.env` แล้วใส่ค่าเองจาก Neon Console → ปุ่ม **Connect**
+
+| ตัวแปร | ใช้ทำอะไร | เอาจากไหน |
 |---|---|---|
-| `DATABASE_URL` | เว็บใช้ตอนทำงานปกติ (Transaction pooler) | 6543 |
-| `DIRECT_URL` | ใช้ตอนรันไฟล์ SQL เท่านั้น (Session pooler) | 5432 |
+| `DATABASE_URL` | เว็บใช้ตอนทำงานปกติ | **Pooled connection** (host มี `-pooler`) |
+| `DATABASE_URL_UNPOOLED` | ใช้ตอนรันไฟล์ SQL ด้วย psql เท่านั้น | ปิด Connection pooling (host ไม่มี `-pooler`) |
 
-### 2. สร้างตารางในฐานข้อมูล
+> อย่าใส่ `DATABASE_URL` ซ้ำใน `.env.local` เพราะ Next.js จะใช้ค่าใน `.env.local` ทับ `.env`
 
-เปิด Supabase → **SQL Editor** แล้วรัน 2 ไฟล์นี้ **ตามลำดับ**
+### 3. สร้างตารางในฐานข้อมูล
 
-| ลำดับ | ไฟล์ | ทำอะไร |
-|---|---|---|
-| 1 | `supabase/schema.sql` | สร้างตาราง, ฟังก์ชันออกเลขที่เอกสาร, trigger |
-| 2 | `supabase/lockdown.sql` | **ปิดไม่ให้ REST API สาธารณะแตะข้อมูล** (ดูหัวข้อถัดไป) |
+เปิด Neon Console → **SQL Editor** แล้ววางเนื้อหาไฟล์ `db/schema.sql` แล้วกด Run
+(สร้างตาราง, ฟังก์ชันออกเลขที่เอกสาร, trigger — รันซ้ำได้)
 
-### 3. รัน
+หรือรันจากเครื่องด้วย psql:
+
+```bash
+psql "$DATABASE_URL_UNPOOLED" -f db/schema.sql
+```
+
+### 4. ตั้งชื่อผู้ใช้และรหัสผ่าน
+
+เพิ่ม 3 ค่านี้ใน `.env.local` (ทุกหน้าต้องเข้าสู่ระบบก่อนใช้งาน)
+
+```bash
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="รหัสที่เดายาก"
+AUTH_SECRET="ค่าสุ่ม"   # สร้างด้วย: openssl rand -base64 32
+```
+
+เปลี่ยนรหัสผ่านแล้วรีสตาร์ต dev server ได้เลย ส่วนถ้าเปลี่ยน `AUTH_SECRET`
+ทุกเครื่องที่เข้าสู่ระบบค้างไว้จะถูกออกจากระบบทันที
+
+### 5. รัน
 
 ```bash
 pnpm install
@@ -45,23 +73,18 @@ pnpm dev
 
 เว็บนี้ต่อฐานข้อมูล **จากฝั่ง server เท่านั้น** ทุก query วิ่งผ่าน Server Component
 และ Server Action — ไม่มีรหัสหรือคีย์อะไรหลุดไปกับ JavaScript ที่ส่งให้เบราว์เซอร์
-จึงใช้งานได้โดยไม่ต้องมีระบบล็อกอิน ตามที่ต้องการ
+และทุกหน้า (รวมถึง Server Action) ต้องเข้าสู่ระบบก่อน ด้วยชื่อผู้ใช้/รหัสผ่านใน `.env.local`
+session เก็บใน cookie แบบ httpOnly ที่เซ็นด้วย `AUTH_SECRET` อยู่ได้ 7 วัน
 
-**แต่ต้องรัน `supabase/lockdown.sql`** เพราะ Supabase ให้สิทธิ์ role `anon`
-แบบเต็ม (SELECT/INSERT/UPDATE/DELETE) กับทุกตารางโดยอัตโนมัติ และ `anon key`
-เป็นค่าสาธารณะที่ใครก็อ่านได้ ถ้าไม่ปิด = ใครก็ลบข้อมูลทั้งร้านได้ผ่าน REST API
-ไฟล์นี้จะยึดสิทธิ์คืนและเปิด RLS แบบไม่มี policy ให้เรียบร้อย
+ฐานข้อมูลบน Neon ไม่มี REST API สาธารณะเปิดไว้ (Data API ปิดเป็นค่าเริ่มต้น)
+คนที่จะแตะข้อมูลได้ต้องมี connection string ซึ่งอยู่แค่ใน `.env.local` บน server
+**อย่า commit ไฟล์ `.env.local` และอย่าเปิด Data API ของ Neon** ถ้าไม่ได้ตั้งสิทธิ์ไว้
 
-ตรวจว่าปิดสำเร็จได้ด้วย:
+> `db/supabase-lockdown.sql` ใช้เฉพาะกรณีกลับไปใช้ Supabase (ปิดสิทธิ์ role `anon`
+> ของ REST API ของ Supabase) — ถ้าใช้ Neon ไม่ต้องรัน
 
-```sql
-select count(*) from information_schema.role_table_grants
-where table_schema = 'public' and grantee in ('anon', 'authenticated');
--- ต้องได้ 0
-```
-
-> ถ้าจะ deploy ขึ้นเน็ตจริง ควรใส่ระบบล็อกอินเพิ่ม เพราะตอนนี้ใครที่เข้าถึง
-> URL ของเว็บได้ ก็ออกและลบเอกสารได้
+> ถ้าจะ deploy ขึ้นเน็ตจริง ต้องเปลี่ยน `ADMIN_PASSWORD` เป็นรหัสที่เดายาก
+> และใช้ HTTPS เสมอ — ระบบนี้มีผู้ใช้คนเดียว ยังไม่มีการล็อกบัญชีเมื่อใส่รหัสผิดซ้ำ ๆ
 
 ---
 
@@ -112,22 +135,26 @@ where table_schema = 'public' and grantee in ('anon', 'authenticated');
 ## โครงสร้างโปรเจกต์
 
 ```
-supabase/
-  schema.sql          ตาราง + ฟังก์ชันออกเลขที่เอกสาร (รันซ้ำได้)
-  lockdown.sql        ปิดสิทธิ์ anon ของ REST API (รันซ้ำได้)
+db/
+  schema.sql              ตาราง + ฟังก์ชันออกเลขที่เอกสาร (รันซ้ำได้)
+  supabase-lockdown.sql   ปิดสิทธิ์ anon ของ REST API (ใช้กับ Supabase เท่านั้น)
 src/
+  middleware.ts           บังคับเข้าสู่ระบบทุกหน้า
   app/
-    page.tsx              ภาพรวม
-    documents/            รายการ / สร้าง / ดู / แก้ไข เอกสาร
-    customers/            ทะเบียนลูกค้า
-    products/             ทะเบียนสินค้า
-    settings/             ตั้งค่าร้าน
+    login/                หน้าเข้าสู่ระบบ + action login/logout
+    (app)/                ทุกหน้าที่ต้องเข้าสู่ระบบ (มีแถบเมนู)
+      page.tsx            ภาพรวม
+      documents/          รายการ / สร้าง / ดู / แก้ไข เอกสาร
+      customers/          ทะเบียนลูกค้า
+      products/           ทะเบียนสินค้า
+      settings/           ตั้งค่าร้าน
   components/
     DocumentPaper.tsx     ตัวเอกสาร A4 ที่พิมพ์ออกมา
     DocumentEditor.tsx    ฟอร์มออกเอกสาร + ตัวอย่างสด
     PaperPreview.tsx      ย่อกระดาษ A4 ให้พอดีจอ
     CustomerManager.tsx   ตารางลูกค้า + แบ่งหน้า
   lib/
+    session.ts            เซ็นและตรวจ cookie ของ session
     db.ts                 การเชื่อมต่อ Postgres (server เท่านั้น)
     data.ts               query ทั้งหมดฝั่ง server
     color.ts              คำนวณคู่สีให้อ่านออกเสมอ

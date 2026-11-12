@@ -13,7 +13,7 @@ type Sql = ReturnType<typeof postgres>;
 const globalForDb = globalThis as unknown as { __shopSql?: Sql };
 
 /**
- * เชื่อมต่อ Supabase Postgres โดยตรงจากฝั่ง server เท่านั้น
+ * เชื่อมต่อ Postgres (Neon) โดยตรงจากฝั่ง server เท่านั้น
  * (ไม่มี key หลุดไปถึงเบราว์เซอร์ — ทุก query วิ่งผ่าน Server Action/Component)
  *
  * เรียกแบบ lazy เพื่อให้หน้า "ยังไม่ได้ตั้งค่า" เปิดได้แม้ยังไม่มี DATABASE_URL
@@ -25,8 +25,8 @@ export function getSql(): Sql {
   if (!url) throw new Error('ยังไม่ได้ตั้งค่า DATABASE_URL ใน .env.local');
 
   globalForDb.__shopSql = postgres(url, {
-    // จำเป็นเพราะ DATABASE_URL ชี้ไปที่ pooler แบบ transaction mode ของ
-    // Supabase (พอร์ต 6543) ซึ่งไม่รองรับ prepared statement
+    // DATABASE_URL ชี้ไปที่ pooler แบบ transaction mode (PgBouncer ของ Neon)
+    // ปิด prepared statement ไว้กันพังเวลา connection ถูกสลับระหว่าง query
     prepare: false,
 
     max: 10,

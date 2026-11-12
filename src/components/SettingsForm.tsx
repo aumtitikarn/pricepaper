@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import DocumentPaper from './DocumentPaper';
 import PaperPreview from './PaperPreview';
-import { saveSettings, type SettingsInput } from '@/app/settings/actions';
+import { saveSettings, type SettingsInput } from '@/app/(app)/settings/actions';
 import { buttonClass, inputClass, labelClass } from './ui';
 import { todayISO, addDaysISO } from '@/lib/format';
 import { ACCENT_PRESETS, DEFAULT_ACCENT, readableOnWhite, textOn } from '@/lib/color';
